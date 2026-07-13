@@ -5,8 +5,9 @@ Main application window for the WhatsApp chat viewer.
 from pathlib import Path
 
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QWidget
+from PyQt6.QtGui import QIcon
 
-from constants import APP_NAME
+from constants import APP_NAME, APP_ICON
 from customwidgets.dialogs import SenderNameDialog
 from customwidgets.groupboxes import ChatBox
 from models.messages import MessagesModel
@@ -25,6 +26,7 @@ class MainWindow(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle(APP_NAME)
+        self.setWindowIcon(QIcon(APP_ICON))
         self.setMinimumSize(1200, 600)
 
         mlayout = QVBoxLayout(self)
