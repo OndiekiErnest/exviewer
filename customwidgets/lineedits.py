@@ -33,9 +33,9 @@ class PwdEdit(QLineEdit):
         super().__init__(*args, **kwargs)
 
         self.show_action = QAction(self)
-        self.show_action.triggered.connect(self.set_hide)
         self.addAction(self.show_action, QLineEdit.ActionPosition.TrailingPosition)
 
+        self.show_action.triggered.connect(self.set_hide)
         self.set_hide()
 
     def set_show(self):
@@ -53,6 +53,6 @@ class PwdEdit(QLineEdit):
         self.show_action.setToolTip("Show")
         self.show_action.setIcon(qicon("fa6.eye"))
         # set masked input
-        self.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
+        self.setEchoMode(QLineEdit.EchoMode.Password)
         # when clicked again, show
         self.show_action.triggered.connect(self.set_show)
