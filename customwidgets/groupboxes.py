@@ -10,7 +10,7 @@ from models.messages import MessagesModel
 from .buttons import Button
 from .frames import SearchFrame
 from .labels import SelectableLabel
-from .lineedits import LineEdit
+from .lineedits import LineEdit, PwdEdit
 from .listviews import ListView
 from .menus import CalendarMenu
 from .utils import qicon
@@ -57,6 +57,10 @@ class ChatBox(QGroupBox):
         self.sending = LineEdit()
         self.sending.setPlaceholderText("Sender's name")
 
+        self.zip_pwd = PwdEdit()
+        self.zip_pwd.setPlaceholderText("ZIP Password")
+        self.zip_pwd.hide()
+
         self.calendar_btn = Button()
         self.calendar_btn.setToolTip("Scroll to date")
         self.calendar_btn.setIcon(qicon(CALENDAR_ICON))
@@ -81,6 +85,8 @@ class ChatBox(QGroupBox):
         tlayout.addWidget(self.copy_btn)
         tlayout.addSpacing(10)
         tlayout.addWidget(self.sending)
+        # tlayout.addSpacing(10)
+        tlayout.addWidget(self.zip_pwd)
         tlayout.addStretch()
         tlayout.addWidget(self.calendar_btn)
         tlayout.addWidget(self.search_area)
@@ -136,6 +142,27 @@ class ChatBox(QGroupBox):
                 clipboard.setText(messages)
 
                 self.copy_btn.setEnabled(False)
+
+    def sendern(self):
+        """return the sender's name"""
+        return self.sending.text().strip()
+
+    def set_sendern(self, name: str):
+        """set the sender's name"""
+        self.sending.setText(name)
+
+    def set_pwd(self, pwd: str):
+        """set the ZIP password and toggle visibility based on whether it's empty"""
+        self.zip_pwd.setText(pwd)
+
+    def pwd(self):
+        """return the encoded ZIP password if visible, otherwise None"""
+        if self.zip_pwd.isVisible():
+            return self.zip_pwd.text().encode()
+
+    def toggle_pwd(self, show: bool):
+        """toggle the ZIP password input visibility"""
+        self.zip_pwd.setVisible(show)
 
     def _on_selection(self, *args):
         """toggle copy button based on selection"""
