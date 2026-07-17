@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QPushButton, QVBoxLayout
 
 from .labels import SelectableLabel
-from .lineedits import LineEdit
+from .lineedits import LineEdit, PwdEdit
 
 
 class EditDialog(QDialog):
@@ -26,7 +26,7 @@ class EditDialog(QDialog):
         self.edit.setPlaceholderText("Sender's name")
         self.edit.textChanged.connect(self._on_text_changed)
 
-        self.pwd = LineEdit()
+        self.pwd = PwdEdit()
         self.pwd.setPlaceholderText("ZIP password")
         self.pwd.textChanged.connect(self._on_text_changed)
         self.pwd.hide()
