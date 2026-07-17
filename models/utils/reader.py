@@ -5,6 +5,8 @@ import mmap
 from datetime import datetime
 from pathlib import Path
 
+from utils import textfile_from_zip
+
 from .datastructs import Offset
 
 logger = logging.getLogger(__name__)
@@ -14,17 +16,18 @@ class Reader:
     """A text file reader that uses mmap for efficient random-access reading."""
 
     # faster attribute access and memory optimization
-    __slots__ = ("mapped_file", "filename")
+    __slots__ = ("mapped_file", "filename", "pwd")
 
-    def __init__(self, filename: Path | None = None):
+    def __init__(self, filename: Path | None = None, pwd: bytes | None = None):
         # variables
         self.mapped_file: mmap.mmap | None = None
-        self.filename: Path | None = None
+        self.filename: Path | None = filename
+        self.pwd: bytes | None = pwd
 
         if filename:
-            self.open_txt(filename)
+            self.open_file(filename)
 
-    def open_txt(self, filename: Path):
+    def open_file(self, filename: Path):
         """opens the file for reading using mmap"""
 
         # close any existing file
@@ -32,10 +35,13 @@ class Reader:
 
         self.filename = filename
 
+        if filename.suffix == ".zip":
+            filename = textfile_from_zip(filename, pwd=self.pwd)
+
         with filename.open("rb") as f:
             self.mapped_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
-            logger.debug(f"opened file: {filename!r}")
+            logger.debug(f"opened export file: {filename!r}")
 
     def read(self, offset: Offset):
         """reads from the file using the given offset"""

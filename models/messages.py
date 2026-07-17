@@ -36,6 +36,7 @@ class MessagesModel(QAbstractListModel):
         self,
         filename: Path,
         sender: str,
+        pwd: bytes | None = None,
         *args,
         cache: MessageCache | None = None,
         **kwargs,
@@ -44,7 +45,7 @@ class MessagesModel(QAbstractListModel):
 
         self.signals = ModelSignals()
 
-        self.reader = Reader(filename=filename)
+        self.reader = Reader(filename=filename, pwd=pwd)
 
         self.parser = MessageParser(self.reader, sender)
 
