@@ -1,8 +1,9 @@
 """App constant values."""
 
 import os
+from datetime import datetime
 
-APP_NAME = "ExViewer"
+APP_NAME = "exviewer"
 APP_VERSION = "0.1.0"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -10,6 +11,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "appdata")
 
 ICONS_DIR = os.path.join(DATA_DIR, "icons")
+
+# created on demand and cleaned up on exit
+# use a timestamp to avoid collisions between concurrent app instances
+TEMP_DIR = os.path.join(DATA_DIR, datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
 
 APP_ICON = os.path.join(ICONS_DIR, "app.png")
 
