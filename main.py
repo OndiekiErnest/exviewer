@@ -2,11 +2,21 @@
 Application entry point.
 """
 
+from utils import remove_temp_dir
+
+
+def cleanup():
+    """cleanup before exiting"""
+    remove_temp_dir()
+
+
 if __name__ == "__main__":
     import sys
 
     from app import mainloop
     from gui import MainWindow
+
+    mainloop.aboutToQuit.connect(cleanup)
 
     args = sys.argv
 
