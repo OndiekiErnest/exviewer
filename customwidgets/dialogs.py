@@ -7,8 +7,8 @@ from .labels import SelectableLabel
 from .lineedits import LineEdit
 
 
-class SenderNameDialog(QDialog):
-    """Dialog for entering the sender name."""
+class EditDialog(QDialog):
+    """Dialog for getting a one-line text."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -22,12 +22,19 @@ class SenderNameDialog(QDialog):
         mlayout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         mlayout.setSpacing(20)
 
-        self.name_edit = LineEdit()
-        self.name_edit.setPlaceholderText("Sender's name")
+        self.edit = LineEdit()
+        self.edit.setPlaceholderText("Sender's name")
+        self.edit.textChanged.connect(self._on_text_changed)
 
-        self.continue_btn = QPushButton("Continue")
-        self.continue_btn.setDefault(True)
-        self.continue_btn.clicked.connect(self.accept)
+        self.pwd = LineEdit()
+        self.pwd.setPlaceholderText("ZIP password")
+        self.pwd.textChanged.connect(self._on_text_changed)
+        self.pwd.hide()
+
+        self.ok_btn = QPushButton("Continue")
+        self.ok_btn.setDefault(True)
+        self.ok_btn.clicked.connect(self.accept)
+        self.ok_btn.setEnabled(False)
 
         tlabel = SelectableLabel(
             "Enter the WhatsApp name of the sender\n(as it appears in the file)"
@@ -36,5 +43,34 @@ class SenderNameDialog(QDialog):
 
         mlayout.addWidget(tlabel)
 
-        mlayout.addWidget(self.name_edit)
-        mlayout.addWidget(self.continue_btn)
+        mlayout.addWidget(self.edit)
+        mlayout.addWidget(self.pwd)
+        mlayout.addWidget(self.ok_btn)
+
+    def _on_text_changed(self, _: str):
+        text = self.text()
+        enable = (
+            bool(text) and bool(self.pwd.text()) if self.pwd.isVisible() else bool(text)
+        )
+        self.ok_btn.setEnabled(enable)
+
+    def toggle_password(self, show: bool):
+        """show or hide the password field"""
+        self.pwd.setVisible(show)
+
+    def text(self):
+        """return the text entered by the user"""
+        return self.edit.text().strip()
+
+    def password(self):
+        """return the pwd entered by the user"""
+        # don't strip password because a pwd can end with a space
+        return self.pwd.text()
+
+    def set_text(self, text: str):
+        """set the text in the edit field"""
+        self.edit.setText(text)
+
+    def set_password(self, text: str):
+        """set the password in the field"""
+        self.pwd.setText(text)
