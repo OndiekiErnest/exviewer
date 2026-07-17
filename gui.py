@@ -100,10 +100,14 @@ class MainWindow(QWidget):
         # None or bytes
         pwd = self.chat_viewer.pwd()
 
-        # create a new messages model with the selected file and sender
-        model = MessagesModel(self.file_path, sender, pwd)
-        # set the model to the chat viewer
-        self.chat_viewer.set_messages(model)
+        try:
+            # create a new messages model with the selected file and sender
+            model = MessagesModel(self.file_path, sender, pwd)
+            # set the model to the chat viewer
+            self.chat_viewer.set_messages(model)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Action Failed", str(e))
 
     def closeEvent(self, a0):
         """close the messages model when the window is closed"""
