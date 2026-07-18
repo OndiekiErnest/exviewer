@@ -143,11 +143,11 @@ class ChatBox(QGroupBox):
 
                 self.copy_btn.setEnabled(False)
 
-    def sendern(self):
+    def sendername(self):
         """return the sender's name"""
         return self.sending.text().strip()
 
-    def set_sendern(self, name: str):
+    def set_sendername(self, name: str):
         """set the sender's name"""
         self.sending.setText(name)
 
