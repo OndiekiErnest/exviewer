@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 APP_NAME = "exviewer"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.2.1"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
