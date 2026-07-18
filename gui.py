@@ -19,8 +19,9 @@ class MainWindow(QWidget):
     Main application window.
 
     Allows the user to:
-        - Select a WhatsApp export (.txt)
+        - Select a WhatsApp export (.txt, .zip)
         - Enter the sender's account name
+        - Enter the ZIP password, if the file is encrypted
         - View the chat
     """
 
@@ -66,15 +67,17 @@ class MainWindow(QWidget):
         show_pwd = self.file_path.suffix == ".zip" and is_zip_encrypted(self.file_path)
 
         # always toggle the password visibility
+        # whether the user closes the dialog or clicks 'continue'
         self.chat_viewer.toggle_pwd(show_pwd)
 
         name_dialog = EditDialog(self)
-        name_dialog.set_text(self.chat_viewer.sendern())
+        name_dialog.set_name(self.chat_viewer.sendername())
+        name_dialog.set_password(self.chat_viewer.zip_pwd.text())
         name_dialog.toggle_password(show_pwd)
 
         if name_dialog.exec():
             self.chat_viewer.set_pwd(name_dialog.password())
-            self.chat_viewer.set_sendern(name_dialog.text())
+            self.chat_viewer.set_sendername(name_dialog.name())
 
         else:
             return
@@ -87,7 +90,7 @@ class MainWindow(QWidget):
         if self.file_path is None:
             return
 
-        sender = self.chat_viewer.sendern()
+        sender = self.chat_viewer.sendername()
 
         if not sender:
             QMessageBox.warning(
