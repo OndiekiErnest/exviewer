@@ -48,7 +48,7 @@ class EditDialog(QDialog):
         mlayout.addWidget(self.ok_btn)
 
     def _on_text_changed(self, _: str):
-        text = self.text()
+        text = self.name()
         enable = (
             bool(text) and bool(self.pwd.text()) if self.pwd.isVisible() else bool(text)
         )
@@ -58,7 +58,7 @@ class EditDialog(QDialog):
         """show or hide the password field"""
         self.pwd.setVisible(show)
 
-    def text(self):
+    def name(self):
         """return the text entered by the user"""
         return self.edit.text().strip()
 
@@ -67,7 +67,7 @@ class EditDialog(QDialog):
         # don't strip password because a pwd can end with a space
         return self.pwd.text()
 
-    def set_text(self, text: str):
+    def set_name(self, text: str):
         """set the text in the edit field"""
         self.edit.setText(text)
 
