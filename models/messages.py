@@ -58,7 +58,7 @@ class MessagesModel(QAbstractListModel):
         self.messages_cache = cache or MessageCache(100)
 
     def __str__(self) -> str:
-        return f"Messages model of {self.rowCount()} rows"
+        return f"Messages list model of {self.rowCount()} rows"
 
     def rowCount(self, parent=None) -> int:
         """return the number of rows in the model"""
