@@ -26,6 +26,9 @@ class ListView(QListView):
         # enable extended selection mode (ctrl+click to select multiple items)
         self.setSelectionMode(QListView.SelectionMode.ExtendedSelection)
 
+        # resize every time the list view is resized
+        self.setResizeMode(QListView.ResizeMode.Adjust)
+
         # set item delegate to custom MessageBubbleDelegate
         self.setItemDelegate(MessageBubbleDelegate())
 
