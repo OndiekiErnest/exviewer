@@ -26,10 +26,12 @@ def textfile_from_zip(zip_path: Path, pwd: bytes | None = None):
     """extract all files from a zip file to the temp dir and return a text (.txt) file path"""
     # create extract folder in temp dir using zip name
     extract_path = Path(TEMP_DIR) / zip_path.stem
-    extract_path.mkdir(parents=True, exist_ok=True)
 
-    with ZipFile(zip_path) as zip_ref:
-        zip_ref.extractall(extract_path, pwd=pwd)
+    if not extract_path.exists():
+        extract_path.mkdir(parents=True, exist_ok=True)
+
+        with ZipFile(zip_path) as zip_ref:
+            zip_ref.extractall(extract_path, pwd=pwd)
 
     for file in extract_path.iterdir():
         if file.suffix == ".txt":
