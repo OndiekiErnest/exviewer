@@ -8,7 +8,7 @@ from models.messages import MessagesModel
 from .delegates import MessageBubbleDelegate
 
 
-class ListView(QListView):
+class MessagesListView(QListView):
     """Custom QListView class with a chat-style appearance."""
 
     def __init__(self, *args, **kwargs):

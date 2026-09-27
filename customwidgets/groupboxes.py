@@ -11,7 +11,7 @@ from .buttons import Button
 from .frames import SearchFrame
 from .labels import SelectableLabel
 from .lineedits import LineEdit, PwdEdit
-from .listviews import ListView
+from .listviews import MessagesListView
 from .menus import CalendarMenu
 from .utils import qicon
 from .widgets import AnimatedIconWidget
@@ -74,7 +74,7 @@ class ChatBox(QGroupBox):
         self.status_label = SelectableLabel()
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-        self.messages_view = ListView()
+        self.messages_view = MessagesListView()
 
         self.spinner = AnimatedIconWidget(SPINNER_ICON)
         self.spinner.hide()
