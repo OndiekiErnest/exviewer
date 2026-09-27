@@ -3,10 +3,12 @@ Application entry point.
 """
 
 from utils import remove_temp_dir
-
+from models.recentfiles import recent_files_model
 
 def cleanup():
     """cleanup before exiting"""
+
+    recent_files_model.save_to_file()
     remove_temp_dir()
 
 

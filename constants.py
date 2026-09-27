@@ -16,6 +16,9 @@ ICONS_DIR = os.path.join(DATA_DIR, "icons")
 # use a timestamp to avoid collisions between concurrent app instances
 TEMP_DIR = os.path.join(DATA_DIR, datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
 
+# recently used files
+RECENT_FILES_PATH = os.path.join(DATA_DIR, "recent_files.json")
+
 APP_ICON = os.path.join(ICONS_DIR, "app.png")
 
 

@@ -1,24 +1,63 @@
 """Custom QGroupBox widgets."""
 
-from PyQt6.QtCore import QDate, QModelIndex, Qt
-from PyQt6.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout
+from PyQt6.QtCore import QDate, QModelIndex, Qt, pyqtSignal
+from PyQt6.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QSplitter, QSizePolicy
 
 from app import mainloop
 from constants import CALENDAR_ICON, COPY_ICON, FILE_ICON, INDEXALL_ICON, SPINNER_ICON
 from models.messages import MessagesModel
+from models.recentfiles import FilesListModel
 
 from .buttons import Button
 from .frames import SearchFrame
 from .labels import SelectableLabel
 from .lineedits import LineEdit, PwdEdit
-from .listviews import MessagesListView
+from .listviews import MessagesListView, RecentFilesListView
 from .menus import CalendarMenu
 from .utils import qicon
 from .widgets import AnimatedIconWidget
 
 
-class ChatBox(QGroupBox):
-    """A QGroupBox that displays chat messages and its functionality."""
+class RecentFiles(QGroupBox):
+    """A widget for showing recent files."""
+
+    file_clicked = pyqtSignal(object)
+
+    def __init__(self, **kwargs):
+        super().__init__("Recent Files", **kwargs)
+        self.setMaximumWidth(450)
+
+        mlayout = QVBoxLayout(self)
+        mlayout.setContentsMargins(0, 0, 0, 0)
+        mlayout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+
+        self.view = RecentFilesListView()
+
+        self.view.selection_changed.connect(self.on_files_selected)
+
+        # mlayout.addLayout(btnslayout)
+        mlayout.addWidget(self.view)
+
+    def set_model(self, model: FilesListModel):
+        """set the model of the list view to the given model"""
+        self.view.setModel(model)
+
+    def on_files_selected(self, selected: list[int]):
+        """handle selection changes in the files list view"""
+
+        if not selected:
+            return
+
+        # get the first file info of the first selected row
+        # and emit the file_clicked signal with it
+        if model := self.view.model():
+            if isinstance(model, FilesListModel):
+                if file_info := model.at_index(selected[0]):
+                    self.file_clicked.emit(file_info)
+
+
+class ChatWindow(QGroupBox):
+    """A QGroupBox that displays chat messages and other related functionality."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,8 +75,23 @@ class ChatBox(QGroupBox):
         mlayout = QVBoxLayout(self)
         mlayout.addLayout(tlayout)
 
+        splitter_szpolicy = QSizePolicy()
+        splitter_szpolicy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
+        splitter_szpolicy.setVerticalPolicy(QSizePolicy.Policy.Expanding)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setSizePolicy(splitter_szpolicy)
+        splitter.setContentsMargins(0, 0, 0, 0)
+        splitter.setChildrenCollapsible(False)
+
         self.calendar_menu = CalendarMenu()
         self.calendar_menu.cal.clicked.connect(self._scroll_to_date)
+
+        self.toggle_sidebar_btn = Button()
+        self.toggle_sidebar_btn.setCheckable(True)
+        self.toggle_sidebar_btn.setToolTip("Toggle 'Recent Files'")
+        self.toggle_sidebar_btn.setIcon(qicon("msc.layout-sidebar-left-off"))
+        self.toggle_sidebar_btn.toggled.connect(self.toggle_recent_files)
 
         self.file_btn = Button()
         self.file_btn.setToolTip("Open WhatsApp export")
@@ -74,11 +128,16 @@ class ChatBox(QGroupBox):
         self.status_label = SelectableLabel()
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
+        self.recent_files = RecentFiles()
+        self.recent_files.hide()  # hidden by default, can be toggled with the button
+
         self.messages_view = MessagesListView()
 
         self.spinner = AnimatedIconWidget(SPINNER_ICON)
         self.spinner.hide()
 
+        tlayout.addWidget(self.toggle_sidebar_btn)
+        tlayout.addSpacing(10)
         tlayout.addWidget(self.file_btn)
         tlayout.addSpacing(10)
         tlayout.addWidget(self.indexall_btn)
@@ -91,7 +150,9 @@ class ChatBox(QGroupBox):
         tlayout.addWidget(self.calendar_btn)
         tlayout.addWidget(self.search_area)
 
-        mlayout.addWidget(self.messages_view)
+        splitter.addWidget(self.recent_files)
+        splitter.addWidget(self.messages_view)
+        mlayout.addWidget(splitter)
 
         blayout.addWidget(self.status_label)
         blayout.addWidget(self.spinner)
@@ -109,7 +170,11 @@ class ChatBox(QGroupBox):
         if selection_model := self.messages_view.selectionModel():
             selection_model.selectionChanged.connect(self._on_selection)
 
-    def model(self):
+    def set_recent_files(self, files: FilesListModel):
+        """set the recent files model to the view"""
+        self.recent_files.set_model(files)
+
+    def messages_model(self):
         """get the messages model or none"""
         return self.messages_view.get_model()
 
@@ -135,7 +200,7 @@ class ChatBox(QGroupBox):
         if not selected:
             return
 
-        if model := self.model():
+        if model := self.messages_model():
             messages = model.as_text(selected)
 
             if clipboard := mainloop.clipboard():
@@ -163,6 +228,16 @@ class ChatBox(QGroupBox):
     def toggle_pwd(self, show: bool):
         """toggle the ZIP password input visibility"""
         self.zip_pwd.setVisible(show)
+
+    def toggle_recent_files(self, show: bool):
+        """toggle the recent files sidebar visibility"""
+
+        if show:
+            self.recent_files.show()
+            self.toggle_sidebar_btn.setIcon(qicon("msc.layout-sidebar-left"))
+        else:
+            self.recent_files.hide()
+            self.toggle_sidebar_btn.setIcon(qicon("msc.layout-sidebar-left-off"))
 
     def _on_selection(self, *args):
         """toggle copy button based on selection"""
@@ -205,7 +280,7 @@ class ChatBox(QGroupBox):
     def _on_indexall(self):
         """slot for calling an index-all"""
 
-        if model := self.model():
+        if model := self.messages_model():
             if model.reader.ended():
                 self.messages_view.scroll_to_bottom()
                 return
@@ -217,7 +292,7 @@ class ChatBox(QGroupBox):
         """slot to scroll to the bottom after an index-all, and disconnect from the signal"""
 
         self.messages_view.scroll_to_bottom()
-        if model := self.model():
+        if model := self.messages_model():
             model.signals.finished.disconnect(self._after_indexall)
 
     def _on_search(self, query: str):
@@ -226,7 +301,7 @@ class ChatBox(QGroupBox):
             self.search_area.toggle_nav(False)
             return
 
-        if model := self.model():
+        if model := self.messages_model():
             self.search_index = -1
 
             self.search_results = model.search(query)
@@ -237,6 +312,6 @@ class ChatBox(QGroupBox):
 
     def _scroll_to_date(self, date: QDate):
         """scroll to the first message with date"""
-        if model := self.model():
+        if model := self.messages_model():
             if indexes := model.search_date(date.toString("yyyyMMdd")):
                 self.messages_view.scroll_to_index(indexes[0])

@@ -4,6 +4,8 @@ from pathlib import Path
 from shutil import rmtree
 from zipfile import BadZipFile, ZipFile
 
+import orjson
+
 from constants import TEMP_DIR
 
 
@@ -43,3 +45,16 @@ def textfile_from_zip(zip_path: Path, pwd: bytes | None = None):
 def remove_temp_dir():
     """remove the temp directory"""
     rmtree(TEMP_DIR, ignore_errors=True)
+
+
+def read_json(json_file: str):
+    """read and return contents of json file, doesn't handle exceptions"""
+    with open(json_file, "rb") as file:
+        return orjson.loads(file.read())
+
+
+def save_json(json_file: str, data: dict | list):
+    """save data to json file, doesn't handle exceptions"""
+    with open(json_file, "wb") as file:
+        serialized = orjson.dumps(data, option=orjson.OPT_INDENT_2)
+        file.write(serialized)

@@ -9,10 +9,11 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QWidget
 
 from constants import APP_ICON, APP_NAME
 from customwidgets.dialogs import EditDialog
-from customwidgets.groupboxes import ChatBox
+from customwidgets.groupboxes import ChatWindow
 from models.messages import MessagesModel
+from models.recentfiles import recent_files_model
 from utils import is_zip_encrypted
-
+from datastructs import FileInfo
 
 class MainWindow(QWidget):
     """
@@ -37,8 +38,12 @@ class MainWindow(QWidget):
         self.file_path: Path | None = None
         self.last_known_dir = Path("~").expanduser() / "Documents"
 
-        self.chat_viewer = ChatBox()
+        self.chat_viewer = ChatWindow()
+        self.chat_viewer.set_recent_files(recent_files_model)
+        # connect signals to slots
         self.chat_viewer.file_btn.clicked.connect(self.open_chat_file)
+        self.chat_viewer.recent_files.file_clicked.connect(self.resume_file)
+        self.chat_viewer.messages_view.row_changed.connect(self.update_file_progress)
 
         self.chat_viewer.sending.returnPressed.connect(self._reload_chat)
         self.chat_viewer.zip_pwd.returnPressed.connect(self._reload_chat)
@@ -48,7 +53,7 @@ class MainWindow(QWidget):
     def open_chat_file(self, filename: str | None = None):
         """use the selected filename to create messages model"""
 
-        if not filename:
+        if not filename:  # None or False
             # select from dialog
             filename, _ = QFileDialog.getOpenFileName(
                 self,
@@ -57,7 +62,7 @@ class MainWindow(QWidget):
                 "Supported Files (*.txt *.zip)",
             )
 
-        if not filename:
+        if not filename:  # empty string from dialog when user cancels
             return
 
         self.file_path = Path(filename)
@@ -83,6 +88,33 @@ class MainWindow(QWidget):
             return
 
         self._reload_chat()
+
+        # add the file to recent files list, if not already present
+        recent_files_model.add_file(str(self.file_path))
+
+    def resume_file(self, file_info: FileInfo):
+        """open file from recent files list, resume from last known row"""
+
+        fpath = Path(file_info.path)
+
+        if self.file_path and self.file_path.resolve() == fpath.resolve():
+            return  # already open, no need to reload
+
+        self.file_path = fpath
+        self.last_known_dir = self.file_path.parent
+
+        self.open_chat_file(filename=str(self.file_path))
+
+        # scroll to the last known row
+        self.chat_viewer.messages_view.scroll_to_row(file_info.progress)
+
+    def update_file_progress(self, row: int):
+        """update the progress of the current file"""
+
+        if self.file_path is None:
+            return
+
+        recent_files_model.update_progress(str(self.file_path), row)
 
     def _reload_chat(self):
         """build the message model and display the chat"""
@@ -112,12 +144,14 @@ class MainWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Action Failed", str(e))
 
+        print("Reload done")
+
     def closeEvent(self, a0):
         """close the messages model when the window is closed"""
-        if model := self.chat_viewer.model():
+        if model := self.chat_viewer.messages_model():
             if isinstance(model, MessagesModel):
                 # close the model here because it is not time consuming,
                 # and won't freeze the UI
                 model.close()
 
-        super().closeEvent(a0)
+        return super().closeEvent(a0)
