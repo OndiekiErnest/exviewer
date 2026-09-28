@@ -66,8 +66,51 @@ class MainWindow(QWidget):
         if not filename:  # empty string from dialog when user cancels
             return
 
-        self.file_path = Path(filename)
+        new_path = Path(filename)
+
+        if file_info := recent_files_model.get_file(str(new_path)):
+            # set the sender from recent files if available
+            self.chat_viewer.set_sendername(file_info.sender)
+
+        self.file_path = new_path
         self.last_known_dir = self.file_path.parent
+
+        self._prompt_for_sender_and_pwd()
+
+    def resume_file(self, file_info: FileInfo):
+        """open file from recent files list, resume from last known row"""
+
+        fpath = Path(file_info.path)
+
+        if self.file_path and self.file_path.resolve() == fpath.resolve():
+            return  # already open, no need to reload
+
+        self.file_path = fpath
+        self.last_known_dir = self.file_path.parent
+
+        # set the sender
+        self.chat_viewer.set_sendername(file_info.sender)
+
+        self._prompt_for_sender_and_pwd()
+
+        # fix: calling resume_from_last() immediately after open_chat_file() will not work
+        # fixme: doesn't work for large files with large progress
+        QTimer.singleShot(
+            500, lambda: self.chat_viewer.resume_from_last(file_info.progress)
+        )
+
+    def update_file_progress(self, row: int):
+        """update the progress of the current file"""
+
+        if self.file_path is None:
+            return
+
+        recent_files_model.update_progress(str(self.file_path), row)
+
+    def _prompt_for_sender_and_pwd(self):
+
+        if self.file_path is None:
+            return
 
         # check if zip and if encrypted
         show_pwd = self.file_path.suffix == ".zip" and is_zip_encrypted(self.file_path)
@@ -89,35 +132,6 @@ class MainWindow(QWidget):
             return
 
         self._reload_chat()
-
-    def resume_file(self, file_info: FileInfo):
-        """open file from recent files list, resume from last known row"""
-
-        fpath = Path(file_info.path)
-
-        if self.file_path and self.file_path.resolve() == fpath.resolve():
-            return  # already open, no need to reload
-
-        self.file_path = fpath
-        self.last_known_dir = self.file_path.parent
-
-        # set the sender
-        self.chat_viewer.set_sendername(file_info.sender)
-
-        self.open_chat_file(filename=str(self.file_path))
-
-        # fix: calling resume_from_last() immediately after open_chat_file() will not work
-        QTimer.singleShot(
-            500, lambda: self.chat_viewer.resume_from_last(file_info.progress)
-        )
-
-    def update_file_progress(self, row: int):
-        """update the progress of the current file"""
-
-        if self.file_path is None:
-            return
-
-        recent_files_model.update_progress(str(self.file_path), row)
 
     def _reload_chat(self):
         """build the message model and display the chat"""
