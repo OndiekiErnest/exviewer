@@ -47,19 +47,12 @@ class MessagesListView(QListView):
             if isinstance(model, MessagesModel):
                 return model
 
-            else:
-                print("Model is not a MessagesModel")
-
-        else:
-            print("Model is None")
-
     def set_messages(self, messages: MessagesModel):
         """
         set the messages model as the list view model,
         close the previous messages model if it exists
         """
 
-        print("Setting messages model")
         if model := self.get_model():
             model.close()
 
@@ -78,15 +71,6 @@ class MessagesListView(QListView):
         """scroll to index"""
         self.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)
         self.setCurrentIndex(index)
-        print(f"Scrolled to index: {index.row()}")
-
-    def scroll_to_row(self, row: int):
-        """scroll to row"""
-        if model := self.get_model():
-            print(f"Scrolling to row: {row}, model row count: {model.rowCount()}")
-            if 0 <= row < model.rowCount():
-                index = model.index(row, 0)
-                self.scroll_to_index(index)
 
     def scroll_to_bottom(self):
         """scroll to the bottom of the list view"""
@@ -105,7 +89,7 @@ class RecentFilesListView(QListView):
         super().__init__(*args, **kwargs)
         self.setAlternatingRowColors(True)
         self.setSelectionMode(QListView.SelectionMode.ExtendedSelection)
-        self.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        self.setTextElideMode(Qt.TextElideMode.ElideRight)
 
     def _confirm(self, message: str):
         """ask a user to confirm deletion/clear"""
@@ -129,11 +113,9 @@ class RecentFilesListView(QListView):
 
     def on_selection_changed(self):
         """handle selection changes"""
-        selected = sorted(
-            (index.row() for index in self.selectedIndexes()),
-            reverse=True,
-        )
-        self.selection_changed.emit(selected)
+        if selected := tuple(index.row() for index in self.selectedIndexes()):
+            # emit the last selected row
+            self.selection_changed.emit(selected[-1])
 
     def delete_selected(self):
         """delete selected items from the list view"""

@@ -35,24 +35,19 @@ class RecentFiles(QGroupBox):
 
         self.view.selection_changed.connect(self.on_files_selected)
 
-        # mlayout.addLayout(btnslayout)
         mlayout.addWidget(self.view)
 
     def set_model(self, model: FilesListModel):
         """set the model of the list view to the given model"""
         self.view.setModel(model)
 
-    def on_files_selected(self, selected: list[int]):
+    def on_files_selected(self, new_selection: int):
         """handle selection changes in the files list view"""
 
-        if not selected:
-            return
-
-        # get the first file info of the first selected row
-        # and emit the file_clicked signal with it
+        # emit the file info of the last selected row
         if model := self.view.model():
             if isinstance(model, FilesListModel):
-                if file_info := model.at_index(selected[0]):
+                if file_info := model.at_index(new_selection):
                     self.file_clicked.emit(file_info)
 
 
@@ -239,6 +234,32 @@ class ChatWindow(QGroupBox):
             self.recent_files.hide()
             self.toggle_sidebar_btn.setIcon(qicon("msc.layout-sidebar-left-off"))
 
+    def resume_from_last(self, row: int):
+        """scroll to the given row in the messages view"""
+
+        if row < 4:  # these rows are already visible, no need to scroll
+            return
+
+        if model := self.messages_model():
+            # idea: load only what's needed, not all messages
+            already_loaded = model.rowCount()
+            if row >= already_loaded:
+
+                # load at least the model batch size
+                # example, if row = 51 and we have 50 rows loaded, load the next 50
+                to_load = max(row - already_loaded, model.BATCH_SIZE)
+                # make to_load a multiple of BATCH_SIZE
+                to_load = (
+                    (to_load + model.BATCH_SIZE - 1) // model.BATCH_SIZE
+                ) * model.BATCH_SIZE
+
+                # since lambda can't be disconnected,
+                # we need to use a named function to disconnect from the signal
+                # and the function should take the row so it keeps a reference to it
+                scroll_func = self._after_resume_batch_loads(row)
+                model.signals.finished.connect(scroll_func)
+                model.indexer.index_batch(to_load)
+
     def _on_selection(self, *args):
         """toggle copy button based on selection"""
         selected = self.messages_view.selectedIndexes()
@@ -294,6 +315,25 @@ class ChatWindow(QGroupBox):
         self.messages_view.scroll_to_bottom()
         if model := self.messages_model():
             model.signals.finished.disconnect(self._after_indexall)
+
+    def _after_resume_batch_loads(self, row: int):
+        """
+        a closure function that returns a function to scroll to the given row,
+        and disconnects itself from the signal
+        """
+
+        def scroll_to_last_row(_):  # takes the signal argument but ignores it
+
+            if model := self.messages_model():
+                if 0 <= row < model.rowCount():
+                    # row is a closure variable
+                    index = model.index(row, 0)
+                    self.messages_view.scroll_to_index(index)
+
+                    # disconnect self from the signal
+                    model.signals.finished.disconnect(scroll_to_last_row)
+
+        return scroll_to_last_row
 
     def _on_search(self, query: str):
         """perform a search"""

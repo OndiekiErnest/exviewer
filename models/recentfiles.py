@@ -38,7 +38,8 @@ class FilesListModel(QAbstractListModel):
             return
 
         if role == Qt.ItemDataRole.DisplayRole:
-            return self.files_list[index.row()].name
+            info = self.files_list[index.row()]
+            return f"[{info.sender}] {info.name}"
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             return self.files_list[index.row()].path
@@ -76,17 +77,20 @@ class FilesListModel(QAbstractListModel):
         for index in sorted_indexes:
             self.removeRow(index)
 
-    def add_file(self, filename: str):
+    def add_file(self, filename: str, sender: str):
         """create a FileInfo and add it to the model"""
         file_info = FileInfo(
             name=os.path.basename(filename),
             path=filename,
             progress=0,
+            sender=sender,
         )
         if not os.path.exists(filename):
             return
 
         if file_info in self.files_list:
+            # update sender and return
+            self.update_sender(filename, sender)
             return  # already in the list, do not add again
 
         row = self.rowCount()
@@ -140,6 +144,20 @@ class FilesListModel(QAbstractListModel):
                 logger.debug(f"Updated progress for {filename!r} to {progress}")
                 return
 
+    def update_sender(self, filename: str, sender: str):
+        """update the sender of a file in the model"""
+
+        for index, file_info in enumerate(self.files_list):
+            if file_info.path == filename:
+                file_info.sender = sender
+
+                model_index = self.index(index)
+                self.dataChanged.emit(
+                    model_index, model_index, [Qt.ItemDataRole.DisplayRole]
+                )
+                logger.debug(f"Updated sender for {filename!r} to {sender}")
+                return
+
     def from_list(self, files: list[dict]):
         """add multiple files from a list of dicts (serialized earlier) to the model"""
         exists = os.path.exists
@@ -149,6 +167,7 @@ class FilesListModel(QAbstractListModel):
                 file_info = FileInfo.from_dict(details)
 
             except KeyError:
+                # discard older files which miss some keys
                 logger.warning(f"Invalid file details: {details}")
                 continue
 

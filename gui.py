@@ -5,6 +5,7 @@ Main application window for the WhatsApp chat viewer.
 from pathlib import Path
 
 from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QWidget
 
 from constants import APP_ICON, APP_NAME
@@ -89,9 +90,6 @@ class MainWindow(QWidget):
 
         self._reload_chat()
 
-        # add the file to recent files list, if not already present
-        recent_files_model.add_file(str(self.file_path))
-
     def resume_file(self, file_info: FileInfo):
         """open file from recent files list, resume from last known row"""
 
@@ -103,10 +101,15 @@ class MainWindow(QWidget):
         self.file_path = fpath
         self.last_known_dir = self.file_path.parent
 
+        # set the sender
+        self.chat_viewer.set_sendername(file_info.sender)
+
         self.open_chat_file(filename=str(self.file_path))
 
-        # scroll to the last known row
-        self.chat_viewer.messages_view.scroll_to_row(file_info.progress)
+        # fix: calling resume_from_last() immediately after open_chat_file() will not work
+        QTimer.singleShot(
+            500, lambda: self.chat_viewer.resume_from_last(file_info.progress)
+        )
 
     def update_file_progress(self, row: int):
         """update the progress of the current file"""
@@ -135,6 +138,10 @@ class MainWindow(QWidget):
         # None or bytes
         pwd = self.chat_viewer.pwd()
 
+        # add the file to recent files list
+        # if file already preset, update sender
+        recent_files_model.add_file(str(self.file_path), self.chat_viewer.sendername())
+
         try:
             # create a new messages model with the selected file and sender
             model = MessagesModel(self.file_path, sender, pwd)
@@ -143,8 +150,6 @@ class MainWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Action Failed", str(e))
-
-        print("Reload done")
 
     def closeEvent(self, a0):
         """close the messages model when the window is closed"""
