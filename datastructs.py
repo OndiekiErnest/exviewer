@@ -12,6 +12,7 @@ class FileInfo:
     name: str  # base name
     path: str  # full path
     progress: int  # number of messages read from the file
+    sender: str
 
     def __str__(self) -> str:
         return f"{self.name} - {self.progress} read"
@@ -43,5 +44,7 @@ class FileInfo:
         name = data["name"]
         path = data["path"]
         progress = data["progress"]
+        # raise KeyError for older version, which trigger discard of the file
+        sender = data["sender"]
 
-        return cls(name=name, path=path, progress=progress)
+        return cls(name=name, path=path, progress=progress, sender=sender)
