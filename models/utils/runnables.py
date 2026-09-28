@@ -43,7 +43,7 @@ class IndexingWorker(QRunnable):
 
                 new_offsets = self._all_offsets()
 
-            else:
+            elif self.batch_size > 0:  # fix: don't process any other negative
                 self.signals.started.emit(self.batch_size)
 
                 new_offsets = (
@@ -51,6 +51,10 @@ class IndexingWorker(QRunnable):
                     for _ in range(self.batch_size)
                     if (offset := self.parser.get_offset())
                 )
+
+            else:
+                # no started signal was emitted, so we don't need finished signal
+                return
 
             # we can't call len(new_offsets) because it's a generator
             len_b4 = len(self.offsets)
