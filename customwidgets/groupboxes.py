@@ -234,32 +234,6 @@ class ChatWindow(QGroupBox):
             self.recent_files.hide()
             self.toggle_sidebar_btn.setIcon(qicon("msc.layout-sidebar-left-off"))
 
-    def resume_from_last(self, row: int):
-        """scroll to the given row in the messages view"""
-
-        if row < 4:  # these rows are already visible, no need to scroll
-            return
-
-        if model := self.messages_model():
-            # idea: load only what's needed, not all messages
-            already_loaded = model.rowCount()
-            if row >= already_loaded:
-
-                # load at least the model batch size
-                # example, if row = 51 and we have 50 rows loaded, load the next 50
-                to_load = max(row - already_loaded, model.BATCH_SIZE)
-                # make to_load a multiple of BATCH_SIZE
-                to_load = (
-                    (to_load + model.BATCH_SIZE - 1) // model.BATCH_SIZE
-                ) * model.BATCH_SIZE
-
-                # since lambda can't be disconnected,
-                # we need to use a named function to disconnect from the signal
-                # and the function should take the row so it keeps a reference to it
-                scroll_func = self._after_resume_batch_loads(row)
-                model.signals.finished.connect(scroll_func)
-                model.indexer.index_batch(to_load)
-
     def _on_selection(self, *args):
         """toggle copy button based on selection"""
         selected = self.messages_view.selectedIndexes()
@@ -279,19 +253,21 @@ class ChatWindow(QGroupBox):
 
     def _insert_started(self, batch_size: int | str):
         """slot for when insert starts"""
-        self.spinner.show()
+
         msg = (
             f"Reading the next {batch_size:,} messages..."
             if isinstance(batch_size, int)
             else f"Reading {batch_size} messages..."
         )
         self.status_label.setText(msg)
+        self.spinner.show()
 
     def _insert_finished(self, total_messages: int):
         """slot for when insert finishes"""
-        self.spinner.hide()
+
         # display total messages loaded (comma-separated)
         self.status_label.setText(f"Loaded messages: {total_messages:,}")
+        self.spinner.hide()
 
     def _insert_errored(self, error: Exception):
         """slot for when insert errors"""
@@ -315,25 +291,6 @@ class ChatWindow(QGroupBox):
         self.messages_view.scroll_to_bottom()
         if model := self.messages_model():
             model.signals.finished.disconnect(self._after_indexall)
-
-    def _after_resume_batch_loads(self, row: int):
-        """
-        a closure function that returns a function to scroll to the given row,
-        and disconnects itself from the signal
-        """
-
-        def scroll_to_last_row(_):  # takes the signal argument but ignores it
-
-            if model := self.messages_model():
-                if 0 <= row < model.rowCount():
-                    # row is a closure variable
-                    index = model.index(row, 0)
-                    self.messages_view.scroll_to_index(index)
-
-                    # disconnect self from the signal
-                    model.signals.finished.disconnect(scroll_to_last_row)
-
-        return scroll_to_last_row
 
     def _on_search(self, query: str):
         """perform a search"""
