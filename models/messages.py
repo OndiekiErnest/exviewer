@@ -23,6 +23,9 @@ class ModelSignals(QObject):
     errored = pyqtSignal(str)
     """insert errored signal"""
 
+    resume_ready = pyqtSignal(int)
+    """model is ready to resume, emits the resume row"""
+
 
 class MessagesModel(QAbstractListModel):
     """Data model for the messages list."""
@@ -39,6 +42,7 @@ class MessagesModel(QAbstractListModel):
         pwd: bytes | None = None,
         *args,
         cache: MessageCache | None = None,
+        resume_row: int | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -49,11 +53,12 @@ class MessagesModel(QAbstractListModel):
 
         self.parser = MessageParser(self.reader, sender)
 
-        self.indexer = OffsetIndexer(self.parser)
+        self.indexer = OffsetIndexer(self.parser, resume_row=resume_row)
         self.indexer.signals.errored.connect(self.signals.errored)
         self.indexer.signals.started.connect(self.signals.started)
         self.indexer.signals.finished.connect(self._insert_finished)
         self.indexer.signals.index_changed.connect(self._model_updated)
+        self.indexer.signals.resume_ready.connect(self.signals.resume_ready)
 
         self.messages_cache = cache or MessageCache(100)
 

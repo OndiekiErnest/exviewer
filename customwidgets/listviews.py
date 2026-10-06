@@ -55,7 +55,9 @@ class MessagesListView(QListView):
 
         if model := self.get_model():
             model.close()
+            model.deleteLater()
 
+        messages.signals.resume_ready.connect(self.scroll_to_row)
         self.setModel(messages)
 
     def on_vscroll(self, _):
@@ -67,16 +69,27 @@ class MessagesListView(QListView):
             top_row = index.row()
             self.row_changed.emit(top_row)
 
-    def scroll_to_index(self, index: QModelIndex):
+    def scroll_to_index(
+        self,
+        index: QModelIndex,
+        scroll_hint=QAbstractItemView.ScrollHint.PositionAtCenter,
+    ):
         """scroll to index"""
-        self.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)
+
         self.setCurrentIndex(index)
+        self.scrollTo(index, scroll_hint)
+
+    def scroll_to_row(self, row: int):
+        """scroll to the specified row"""
+        if model := self.get_model():
+            index = model.index(row, 0)
+            self.scroll_to_index(index, QAbstractItemView.ScrollHint.PositionAtTop)
 
     def scroll_to_bottom(self):
         """scroll to the bottom of the list view"""
         if model := self.get_model():
             index = model.index(model.rowCount() - 1, 0)
-            self.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtBottom)
+            self.scroll_to_index(index, QAbstractItemView.ScrollHint.PositionAtBottom)
 
 
 class RecentFilesListView(QListView):

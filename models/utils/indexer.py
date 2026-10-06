@@ -22,6 +22,9 @@ class IndexerSignals(QObject):
     errored = pyqtSignal(str)
     """emitted when indexing errors"""
 
+    resume_ready = pyqtSignal(int)
+    """emitted when indexer has loaded enough rows to resume, emits resume_row"""
+
 
 class OffsetIndexer(QObject):
     """
@@ -37,7 +40,9 @@ class OffsetIndexer(QObject):
     # faster attribute access and memory optimization
     __slots__ = ("parser", "offsets", "signals", "thread_pool")
 
-    def __init__(self, parser: MessageParser, *args, **kwargs):
+    def __init__(
+        self, parser: MessageParser, *args, resume_row: int | None = None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.parser = parser
@@ -48,11 +53,37 @@ class OffsetIndexer(QObject):
         self.thread_pool = QThreadPool()
         self.thread_pool.setMaxThreadCount(1)
 
+        if resume_row:
+            # index right away
+            self.index_at_least(resume_row)
+
     def __len__(self) -> int:
         return len(self.offsets)
 
     def __getitem__(self, index: int) -> Offset:
         return self.offsets[index]
+
+    def index_at_least(self, rows):
+        """index enough rows to resume/scroll to"""
+
+        def on_worker_finished(loaded: int):
+            """slot for the finished signal"""
+            self.signals.finished.emit(loaded)
+            self.signals.resume_ready.emit(rows)
+
+        batch = 50
+        already_loaded = len(self.offsets)
+        to_load = max(rows - already_loaded, batch)
+        # make to_load a multiple of BATCH
+        to_load = ((to_load + batch - 1) // batch) * batch
+
+        worker = IndexingWorker(self.parser, self.offsets, to_load)
+        # forward the signals from the worker to the indexer
+        worker.signals.started.connect(self.signals.started)
+        worker.signals.errored.connect(self.signals.errored)
+        worker.signals.finished.connect(on_worker_finished)
+
+        self.thread_pool.start(worker)
 
     def index_batch(self, batch_size: int = 50):
         """
