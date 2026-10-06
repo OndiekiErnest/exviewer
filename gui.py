@@ -5,7 +5,6 @@ Main application window for the WhatsApp chat viewer.
 from pathlib import Path
 
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QWidget
 
 from constants import APP_ICON, APP_NAME
@@ -69,8 +68,9 @@ class MainWindow(QWidget):
         new_path = Path(filename)
 
         if file_info := recent_files_model.get_file(str(new_path)):
-            # set the sender from recent files if available
-            self.chat_viewer.set_sendername(file_info.sender)
+            # resume automatically
+            self.resume_file(file_info)
+            return
 
         self.file_path = new_path
         self.last_known_dir = self.file_path.parent
@@ -91,13 +91,7 @@ class MainWindow(QWidget):
         # set the sender
         self.chat_viewer.set_sendername(file_info.sender)
 
-        self._prompt_for_sender_and_pwd()
-
-        # fix: calling resume_from_last() immediately after open_chat_file() will not work
-        # fixme: doesn't work for large files with large progress
-        QTimer.singleShot(
-            500, lambda: self.chat_viewer.resume_from_last(file_info.progress)
-        )
+        self._prompt_for_sender_and_pwd(resume_index=file_info.progress)
 
     def update_file_progress(self, row: int):
         """update the progress of the current file"""
@@ -107,7 +101,8 @@ class MainWindow(QWidget):
 
         recent_files_model.update_progress(str(self.file_path), row)
 
-    def _prompt_for_sender_and_pwd(self):
+    def _prompt_for_sender_and_pwd(self, resume_index: int | None = None):
+        """pop up dialog and reload chat"""
 
         if self.file_path is None:
             return
@@ -131,9 +126,9 @@ class MainWindow(QWidget):
         else:
             return
 
-        self._reload_chat()
+        self._reload_chat(resume_row=resume_index)
 
-    def _reload_chat(self):
+    def _reload_chat(self, resume_row: int | None = None):
         """build the message model and display the chat"""
 
         if self.file_path is None:
@@ -158,7 +153,7 @@ class MainWindow(QWidget):
 
         try:
             # create a new messages model with the selected file and sender
-            model = MessagesModel(self.file_path, sender, pwd)
+            model = MessagesModel(self.file_path, sender, pwd, resume_row=resume_row)
             # set the model to the chat viewer
             self.chat_viewer.set_messages(model)
 
